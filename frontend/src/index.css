@@ -1,0 +1,4 @@
+/* Ensure your build tool is set up to process Tailwind CSS directives below */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -3,23 +3,43 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ItemCard from "../Components/ItemCard";
 import axios from "axios";
-import { FaClock, FaExclamationTriangle, FaCheckCircle } from "react-icons/fa";
+import { 
+  FaClock, 
+  FaExclamationTriangle, 
+  FaCheckCircle, 
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaBox,
+  FaExclamationCircle,
+  FaSearch
+} from "react-icons/fa";
+import { 
+  ChefHat, 
+  AlertTriangle, 
+  RefreshCw,
+  Filter,
+  Shield,
+  Sparkles
+} from "lucide-react";
 
 const Dashboard = () => {
   const [items, setItems] = useState([]);
   const [editItem, setEditItem] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchItems = async () => {
     setLoading(true);
+    setRefreshing(true);
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get("http://localhost:5000/api/items", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Combine manual and uploaded items
       const allItems = res.data.items || [];
       setItems(allItems);
     } catch (err) {
@@ -27,6 +47,7 @@ const Dashboard = () => {
       setItems([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -67,102 +88,433 @@ const Dashboard = () => {
   };
 
   const getExpiryStatus = (expiryDate) => {
-    if (!expiryDate) return { status: "unknown", text: "No Date", color: "bg-gray-200 text-gray-800" };
+    if (!expiryDate) return { status: "unknown", text: "No Date", color: "bg-gray-100 text-gray-600", icon: <FaBox className="text-gray-500" /> };
     const today = new Date();
     const exp = new Date(expiryDate);
     const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return { status: "expired", text: "Expired", color: "bg-red-100 text-red-800" };
-    if (diffDays <= 3) return { status: "expiring", text: "Expiring Soon", color: "bg-orange-100 text-orange-800" };
-    return { status: "valid", text: "Valid", color: "bg-green-100 text-green-800" };
+    
+    if (diffDays < 0) return { 
+      status: "expired", 
+      text: "Expired", 
+      color: "bg-red-50 text-red-700 border border-red-200",
+      icon: <FaExclamationCircle className="text-red-500" />
+    };
+    if (diffDays <= 3) return { 
+      status: "expiring", 
+      text: `${diffDays} day${diffDays !== 1 ? 's' : ''} left`, 
+      color: "bg-orange-50 text-orange-700 border border-orange-200",
+      icon: <AlertTriangle className="h-4 w-4 text-orange-500" />
+    };
+    return { 
+      status: "valid", 
+      text: `${diffDays} days left`, 
+      color: "bg-emerald-50 text-emerald-700 border border-emerald-200 ",
+      icon: <FaCheckCircle className="text-emerald-500" />
+    };
   };
 
   const filteredItems = items.filter((item) => {
     const status = getExpiryStatus(item.expiryDate).status;
-    if (activeTab === "all") return true;
-    if (activeTab === "expiring") return status === "expiring";
-    if (activeTab === "expired") return status === "expired";
-    return true;
+    const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (activeTab === "all") return matchesSearch;
+    if (activeTab === "expiring") return status === "expiring" && matchesSearch;
+    if (activeTab === "expired") return status === "expired" && matchesSearch;
+    if (activeTab === "valid") return status === "valid" && matchesSearch;
+    return matchesSearch;
   });
 
-  const totalItems = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const expiringCount = items.filter((item) => getExpiryStatus(item.expiryDate).status === "expiring").length;
-  const expiredCount = items.filter((item) => getExpiryStatus(item.expiryDate).status === "expired").length;
+  const stats = [
+    {
+      label: "Total Products",
+      value: items.length,
+      color: "from-blue-500 to-cyan-500",
+      icon: <FaBox className="h-6 w-6 text-white" />
+    },
+    {
+      label: "Expiring Soon",
+      value: items.filter(item => getExpiryStatus(item.expiryDate).status === "expiring").length,
+      color: "from-orange-500 to-amber-500",
+      icon: <FaClock className="h-6 w-6 text-white" />
+    },
+    {
+      label: "Expired Items",
+      value: items.filter(item => getExpiryStatus(item.expiryDate).status === "expired").length,
+      color: "from-red-500 to-pink-500",
+      icon: <FaExclamationTriangle className="h-6 w-6 text-white" />
+    },
+    {
+      label: "Fresh Items",
+      value: items.filter(item => getExpiryStatus(item.expiryDate).status === "valid").length,
+      color: "from-emerald-500 to-green-500",
+      icon: <FaCheckCircle className="h-6 w-6 text-white" />
+    }
+  ];
+
+  const tabs = [
+    { key: "all", label: "All Items", icon: <FaBox className="h-4 w-4" />, count: items.length },
+    { key: "expiring", label: "Expiring Soon", icon: <FaClock className="h-4 w-4" />, count: items.filter(item => getExpiryStatus(item.expiryDate).status === "expiring").length },
+    { key: "expired", label: "Expired", icon: <FaExclamationTriangle className="h-4 w-4" />, count: items.filter(item => getExpiryStatus(item.expiryDate).status === "expired").length },
+    { key: "valid", label: "Fresh", icon: <FaCheckCircle className="h-4 w-4" />, count: items.filter(item => getExpiryStatus(item.expiryDate).status === "valid").length }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-100 to-emerald-200 py-8 px-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10">
-          <h1 className="text-4xl font-extrabold text-emerald-800">🧊 Smart Fridge Dashboard</h1>
-          <p className="text-gray-600 mt-2 text-lg">Track your items, expiry dates & keep food fresh!</p>
-        </motion.div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-cyan-50/30 flex flex-col">
+      {/* Background Decorations */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200 rounded-full blur-3xl opacity-20"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-200 rounded-full blur-3xl opacity-20"></div>
+      </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <motion.div whileHover={{ y: -5 }} className="bg-white rounded-xl p-6 shadow-md text-center">
-            <div className="text-3xl font-bold text-emerald-600">{totalItems}</div>
-            <div className="text-sm text-gray-500 mt-2">Total Items</div>
+      <div className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header with Product Name */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.6 }} 
+            className="mb-8"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-2 rounded-xl shadow-lg">
+                    <ChefHat className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-green-700 bg-clip-text text-transparent">
+                      Fridgzilla
+                    </h1>
+                    <p className="text-slate-600 text-sm mt-1">Smart Food Management System</p>
+                  </div>
+                </div>
+                <p className="text-slate-600 text-lg">Track your items, expiry dates & keep food fresh!</p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={fetchItems}
+                  disabled={refreshing}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 text-slate-700 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  <span className="text-sm font-medium">Refresh</span>
+                </motion.button>
+              </div>
+            </div>
           </motion.div>
-          <motion.div whileHover={{ y: -5 }} className="bg-white rounded-xl p-6 shadow-md text-center">
-            <div className="text-3xl font-bold text-orange-500">{expiringCount}</div>
-            <div className="text-sm text-gray-500 mt-2">Expiring Soon</div>
-          </motion.div>
-          <motion.div whileHover={{ y: -5 }} className="bg-white rounded-xl p-6 shadow-md text-center">
-            <div className="text-3xl font-bold text-red-600">{expiredCount}</div>
-            <div className="text-sm text-gray-500 mt-2">Expired Items</div>
-          </motion.div>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-8">
-          {[{ key: "all", label: "All Items", icon: <FaCheckCircle /> }, { key: "expiring", label: "Expiring Soon", icon: <FaClock /> }, { key: "expired", label: "Expired", icon: <FaExclamationTriangle /> }].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold shadow transition-all ${activeTab === tab.key ? "bg-emerald-600 text-white scale-105" : "bg-white text-gray-600 hover:bg-emerald-100"}`}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-        </div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                whileHover={{ y: -5, scale: 1.02 }}
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 relative overflow-hidden"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+                    <p className="text-sm text-slate-600 mt-1">{stat.label}</p>
+                  </div>
+                  <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-md`}>
+                    {stat.icon}
+                  </div>
+                </div>
+                {/* Gradient accent */}
+                <div className={`absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r ${stat.color}`}></div>
+              </motion.div>
+            ))}
+          </div>
 
-        {/* Items Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <AnimatePresence>
-            {loading ? (
-              <p className="text-gray-500">Loading items...</p>
-            ) : filteredItems.length > 0 ? (
-              filteredItems.map((item) => (
-                <motion.div key={item.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="relative">
-                  <ItemCard item={item} />
-                  <div className="absolute top-3 right-3 flex gap-2">
-                    <button onClick={() => setEditItem(item)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded shadow">✏️</button>
-                    <button onClick={() => handleDelete(item.id)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow">🗑️</button>
+          {/* Search and Filter Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 mb-8"
+          >
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="flex-1 w-full">
+                <div className="relative">
+                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <input
+                    type="text"
+                    placeholder="Search items by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 placeholder-slate-400"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <Filter className="h-4 w-4" />
+                <span className="font-medium">Filter by:</span>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex flex-wrap gap-2 mt-6">
+              {tabs.map((tab) => (
+                <motion.button
+                  key={tab.key}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                    activeTab === tab.key
+                      ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    activeTab === tab.key ? "bg-white/20" : "bg-slate-200"
+                  }`}>
+                    {tab.count}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Items Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+            <AnimatePresence>
+              {loading ? (
+                <div className="col-span-full flex justify-center items-center py-12">
+                  <div className="flex items-center gap-3 text-slate-600">
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                    <span>Loading your items...</span>
+                  </div>
+                </div>
+              ) : filteredItems.length > 0 ? (
+                filteredItems.map((item, index) => (
+                  <motion.div
+                   initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                     exit={{ scale: 0.8, opacity: 0 }}
+  className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mt-8" 
+>
+                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 overflow-hidden">
+                      <ItemCard item={item} />
+                      
+                      {/* Action Buttons */}
+                      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setEditItem(item)}
+                          className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-md transition-colors"
+                        >
+                          <FaEdit className="h-3 w-3" />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleDelete(item.id)}
+                          className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md transition-colors"
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </motion.button>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="absolute top-12 right-2">
+                        <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getExpiryStatus(item.expiryDate).color}`}>
+                          {getExpiryStatus(item.expiryDate).icon}
+                          <span>{getExpiryStatus(item.expiryDate).text}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="col-span-full text-center py-16"
+                >
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-12 shadow-lg border border-white/20">
+                    <FaBox className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-slate-700 mb-2">No items found</h3>
+                    <p className="text-slate-500 mb-6">
+                      {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first item"}
+                    </p>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                    >
+                      <FaPlus className="inline h-4 w-4 mr-2" />
+                      Add First Item
+                    </motion.button>
                   </div>
                 </motion.div>
-              ))
-            ) : (
-              <p className="text-gray-500 col-span-full text-center py-12">No items found</p>
-            )}
-          </AnimatePresence>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Edit Modal */}
-        {editItem && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4">Edit Item</h2>
-              <input type="text" value={editItem.name} onChange={(e) => setEditItem({ ...editItem, name: e.target.value })} className="border rounded p-2 w-full mb-3" />
-              <input type="number" value={editItem.quantity} onChange={(e) => setEditItem({ ...editItem, quantity: e.target.value })} className="border rounded p-2 w-full mb-3" />
-              <input type="date" value={editItem.expiryDate?.split("T")[0] || ""} onChange={(e) => setEditItem({ ...editItem, expiryDate: e.target.value })} className="border rounded p-2 w-full mb-4" />
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setEditItem(null)} className="px-4 py-2 bg-gray-400 text-white rounded">Cancel</button>
-                <button onClick={handleSave} className="px-4 py-2 bg-emerald-600 text-white rounded shadow hover:bg-emerald-700">Save</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+        <AnimatePresence>
+          {editItem && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-slate-800">Edit Item</h2>
+                  <button
+                    onClick={() => setEditItem(null)}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    <span className="text-2xl text-slate-400">×</span>
+                  </button>
+                </div>
+                <div className="space-y-4 pt-10">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 mb-2 block">Item Name</label>
+                    <input
+                      type="text"
+                      value={editItem.name}
+                      onChange={(e) => setEditItem({ ...editItem, name: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 mb-2 block">Quantity</label>
+                    <input
+                      type="number"
+                      value={editItem.quantity}
+                      onChange={(e) => setEditItem({ ...editItem, quantity: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 mb-2 block">Expiry Date</label>
+                    <input
+                      type="date"
+                      value={editItem.expiryDate?.split("T")[0] || ""}
+                      onChange={(e) => setEditItem({ ...editItem, expiryDate: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-8">
+                  <button
+                    onClick={() => setEditItem(null)}
+                    className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-slate-800 text-white py-12 px-6 mt-auto">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Brand */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-2 rounded-lg">
+                  <ChefHat className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xl font-bold">Fridgzilla</span>
+              </div>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Smart food management system to reduce waste and keep your kitchen organized.
+              </p>
+              <div className="flex items-center space-x-2 text-slate-400 text-sm">
+                <Shield className="h-4 w-4" />
+                <span>Secure • Private • Reliable</span>
+              </div>
+            </div>
+
+            {/* Features */}
+            <div>
+              <h3 className="font-semibold text-white mb-4">Features</h3>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li className="flex items-center space-x-2">
+                  <Sparkles className="h-3 w-3 text-emerald-400" />
+                  <span>Expiry Tracking</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Sparkles className="h-3 w-3 text-emerald-400" />
+                  <span>Smart Reminders</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Sparkles className="h-3 w-3 text-emerald-400" />
+                  <span>Bill Scanning</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Sparkles className="h-3 w-3 text-emerald-400" />
+                  <span>Waste Analytics</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h3 className="font-semibold text-white mb-4">Support</h3>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">FAQs</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Tutorials</a></li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h3 className="font-semibold text-white mb-4">Legal</h3>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Data Protection</a></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-slate-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-slate-400 text-sm">
+              © 2024 Fridgzilla. All rights reserved.
+            </p>
+            <div className="flex space-x-6 mt-4 md:mt-0 text-sm text-slate-400">
+              <a href="#" className="hover:text-white transition-colors">Twitter</a>
+              <a href="#" className="hover:text-white transition-colors">Facebook</a>
+              <a href="#" className="hover:text-white transition-colors">Instagram</a>
+              <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

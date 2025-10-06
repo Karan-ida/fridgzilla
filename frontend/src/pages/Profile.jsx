@@ -1,137 +1,110 @@
-
-// frontend/src/pages/Profile.jsx
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FiEdit2, FiCamera, FiLock, FiTrash2, FiLogOut } from "react-icons/fi";
+import { FiEdit2, FiCamera, FiLogOut, FiLock } from "react-icons/fi";
 
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [editedUser, setEditedUser] = useState({});
   const [isEditing, setIsEditing] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [passwords, setPasswords] = useState({ current: "", new: "" });
-  const navigate = useNavigate();
+  const [passwords, setPasswords] = useState({ oldPassword: "", newPassword: "" });
 
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  // Fetch profile data
   useEffect(() => {
-    const token = localStorage.getItem("token");
     if (!token) return navigate("/login");
 
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setEditedUser(parsedUser);
-    } else {
-      axios
-        .get("http://localhost:5000/api/auth/me", {
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/users/profile", {
           headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => {
-          // ✅ Some backends return { user: {...} } and others return {...}
-          const fetchedUser = res.data.user || res.data;
-          setUser(fetchedUser);
-          setEditedUser(fetchedUser);
-          localStorage.setItem("user", JSON.stringify(fetchedUser));
-        })
-        .catch((err) => {
-          console.error(err);
-          if (err.response?.status === 401) {
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            navigate("/login");
-          }
         });
-    }
-  }, [navigate]);
+        setUser(res.data);
+        setEditedUser(res.data);
+        localStorage.setItem("user", JSON.stringify(res.data));
+      } catch (err) {
+        console.error(err);
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
+        }
+      }
+    };
 
-  const handleSave = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    fetchProfile();
+  }, [navigate, token]);
 
-    setIsLoading(true);
-    try {
-      const res = await axios.put(
-        "http://localhost:5000/api/auth/update",
-        editedUser,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const updatedUser = res.data.user || res.data;
-      setUser(updatedUser);
-      setEditedUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      setIsEditing(false);
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to update profile.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    setIsLoading(true);
-    try {
-      await axios.put(
-        "http://localhost:5000/api/auth/change-password",
-        passwords,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Password changed successfully!");
-      setPasswords({ current: "", new: "" });
-      setShowPasswordModal(false);
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to change password.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    setIsLoading(true);
-    try {
-      await axios.delete("http://localhost:5000/api/auth/delete", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert("Account deleted successfully.");
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      navigate("/login");
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete account.");
-    } finally {
-      setIsLoading(false);
-      setShowDeleteModal(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    navigate("/login");
-  };
-
-  const handleAvatarChange = (e) => {
+  // Handle avatar upload
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const avatarData = reader.result;
-      setEditedUser({ ...editedUser, avatar: avatarData });
-      const updatedUser = { ...user, avatar: avatarData };
-      setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-    };
-    reader.readAsDataURL(file);
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      const res = await axios.put("http://localhost:5000/api/users/avatar", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setUser(res.data.user);
+      setEditedUser(res.data.user);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload avatar.");
+    }
+  };
+
+  // Handle profile update
+  const handleProfileUpdate = async () => {
+    setIsLoading(true);
+    try {
+      const res = await axios.put("http://localhost:5000/api/users/update", editedUser, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUser(res.data.user);
+      setEditedUser(res.data.user);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update profile.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle password change
+  const handleChangePassword = async () => {
+    if (!passwords.oldPassword || !passwords.newPassword)
+      return alert("Please fill both fields.");
+    try {
+      await axios.put("http://localhost:5000/api/users/change-password", passwords, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Password updated successfully!");
+      setPasswords({ oldPassword: "", newPassword: "" });
+      setIsChangingPassword(false);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to change password.");
+    }
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
   };
 
   if (!user) return <p className="text-center mt-20">Loading profile...</p>;
@@ -144,8 +117,8 @@ const Profile = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Profile Card */}
         <div className="backdrop-blur-lg bg-white/70 rounded-2xl shadow-2xl overflow-hidden">
+          {/* HEADER */}
           <div className="bg-gradient-to-r from-emerald-500 to-green-600 py-10 px-6 text-center relative">
             <label className="relative inline-block cursor-pointer group">
               <img
@@ -167,20 +140,33 @@ const Profile = () => {
             <p className="text-emerald-100">{user.email}</p>
           </div>
 
+          {/* PROFILE BODY */}
           <div className="px-8 py-6 space-y-6">
-            {/* Editable fields */}
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-800">
-                Profile Information
-              </h2>
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
-              >
-                <FiEdit2 /> {isEditing ? "Cancel" : "Edit"}
-              </button>
+              <h2 className="text-xl font-semibold text-gray-800">Profile Information</h2>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                >
+                  <FiEdit2 /> {isEditing ? "Cancel" : "Edit"}
+                </button>
+                <button
+                  onClick={() => setIsChangingPassword(!isChangingPassword)}
+                  className="text-yellow-600 hover:text-yellow-700 flex items-center gap-1"
+                >
+                  <FiLock /> {isChangingPassword ? "Close" : "Change Password"}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="text-red-600 hover:text-red-700 flex items-center gap-1"
+                >
+                  <FiLogOut /> Logout
+                </button>
+              </div>
             </div>
 
+            {/* PROFILE EDIT FORM */}
             {["name", "email", "phone"].map((field) => (
               <div key={field}>
                 <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
@@ -196,16 +182,15 @@ const Profile = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
                   />
                 ) : (
-                  <p className="text-gray-600">
-                    {user[field] || "Not provided"}
-                  </p>
+                  <p className="text-gray-600">{user[field] || "Not provided"}</p>
                 )}
               </div>
             ))}
 
+            {/* SAVE BUTTON */}
             {isEditing && (
               <motion.button
-                onClick={handleSave}
+                onClick={handleProfileUpdate}
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white py-3 px-4 rounded-md shadow-md hover:shadow-lg transition-all"
               >
@@ -213,127 +198,42 @@ const Profile = () => {
               </motion.button>
             )}
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-              <button
-                onClick={() => setShowPasswordModal(true)}
-                className="flex items-center justify-center gap-2 w-full bg-blue-500 text-white py-3 px-4 rounded-lg shadow hover:bg-blue-600 transition"
-              >
-                <FiLock /> Change Password
-              </button>
-
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="flex items-center justify-center gap-2 w-full bg-red-500 text-white py-3 px-4 rounded-lg shadow hover:bg-red-600 transition"
-              >
-                <FiTrash2 /> Delete Account
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center justify-center gap-2 w-full bg-gray-600 text-white py-3 px-4 rounded-lg shadow hover:bg-gray-700 transition"
-              >
-                <FiLogOut /> Logout
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Password Modal */}
-        <AnimatePresence>
-          {showPasswordModal && (
-            <motion.div
-              className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
+            {/* PASSWORD CHANGE FORM */}
+            {isChangingPassword && (
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="border-t border-gray-200 pt-6 space-y-3"
               >
-                <h3 className="text-lg font-semibold mb-4">
-                  Change Password
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Change Password</h3>
                 <input
                   type="password"
-                  placeholder="Current Password"
-                  value={passwords.current}
+                  placeholder="Old Password"
+                  value={passwords.oldPassword}
                   onChange={(e) =>
-                    setPasswords({ ...passwords, current: e.target.value })
+                    setPasswords({ ...passwords, oldPassword: e.target.value })
                   }
-                  className="w-full mb-3 px-4 py-2 border rounded-md"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition"
                 />
                 <input
                   type="password"
                   placeholder="New Password"
-                  value={passwords.new}
+                  value={passwords.newPassword}
                   onChange={(e) =>
-                    setPasswords({ ...passwords, new: e.target.value })
+                    setPasswords({ ...passwords, newPassword: e.target.value })
                   }
-                  className="w-full mb-4 px-4 py-2 border rounded-md"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition"
                 />
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => setShowPasswordModal(false)}
-                    className="px-4 py-2 rounded-md border"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleChangePassword}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md"
-                  >
-                    Save
-                  </button>
-                </div>
+                <button
+                  onClick={handleChangePassword}
+                  className="w-full bg-yellow-500 text-white py-2 rounded-md hover:bg-yellow-600 transition"
+                >
+                  Update Password
+                </button>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Delete Modal */}
-        <AnimatePresence>
-          {showDeleteModal && (
-            <motion.div
-              className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg"
-              >
-                <h3 className="text-lg font-semibold mb-4">
-                  Confirm Delete Account
-                </h3>
-                <p className="mb-4 text-gray-600">
-                  Are you sure you want to permanently delete your account? This
-                  action cannot be undone.
-                </p>
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => setShowDeleteModal(false)}
-                    className="px-4 py-2 rounded-md border"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDeleteAccount}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </div>
+        </div>
       </motion.div>
     </div>
   );

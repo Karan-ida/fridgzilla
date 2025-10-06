@@ -48,10 +48,8 @@ const Analytics = () => {
   }, []);
 
   // Summary values
-  const totalItems = items.reduce(
-    (sum, item) => sum + Number(item.quantity || 0),
-    0
-  );
+  const totalProducts = items.length; // total unique products
+  const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0); // total quantity units
 
   const expiringSoon = items.filter((item) => {
     if (!item.expiryDate) return false;
@@ -127,10 +125,14 @@ const Analytics = () => {
         </motion.div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           <div className="bg-white rounded-xl shadow p-6 text-center">
-            <h2 className="text-xl font-bold text-indigo-700">Total Items</h2>
-            <p className="text-3xl font-extrabold mt-2">{totalItems}</p>
+            <h2 className="text-xl font-bold text-indigo-700">Total Products</h2>
+            <p className="text-3xl font-extrabold mt-2">{totalProducts}</p>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6 text-center">
+            <h2 className="text-xl font-bold text-indigo-700">Total Quantity</h2>
+            <p className="text-3xl font-extrabold mt-2">{totalQuantity}</p>
           </div>
           <div className="bg-white rounded-xl shadow p-6 text-center">
             <h2 className="text-xl font-bold text-yellow-600">Expiring Soon</h2>
@@ -146,9 +148,7 @@ const Analytics = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Line Chart - Historical Data */}
           <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">
-              📈 Items Added Over Time
-            </h2>
+            <h2 className="text-lg font-semibold mb-4">📈 Items Added Over Time</h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={historicalData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -184,9 +184,7 @@ const Analytics = () => {
 
           {/* Pie Chart - Categories */}
           <div className="bg-white rounded-xl shadow p-6 lg:col-span-2">
-            <h2 className="text-lg font-semibold mb-4">
-              🍎 Category Distribution
-            </h2>
+            <h2 className="text-lg font-semibold mb-4">🍎 Category Distribution</h2>
             <ResponsiveContainer width="100%" height={350}>
               <PieChart>
                 <Pie

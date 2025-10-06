@@ -176,14 +176,7 @@ const History = () => {
                   return (
                     <motion.div key={item.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="border rounded-lg overflow-hidden shadow hover:shadow-md">
                       <ItemCard item={item} showDetails />
-                      <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>{status.text}</span>
-                        <span className="text-xs text-gray-500">{item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "N/A"}</span>
-                      </div>
-                      <div className="p-4 flex space-x-2">
-                        <button onClick={() => handleEditClick(item)} className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600">Edit</button>
-                        <button onClick={() => handleDelete(item.id)} className="flex-1 bg-red-500 text-white py-2 rounded-md hover:bg-red-600">Delete</button>
-                      </div>
+
                     </motion.div>
                   );
                 })
@@ -191,26 +184,6 @@ const History = () => {
             </AnimatePresence>
           </div>
         </motion.div>
-
-        {/* Edit Modal */}
-        <AnimatePresence>
-          {editingItem && (
-            <motion.div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <motion.div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md" initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Edit Item</h2>
-                <form onSubmit={handleUpdate} className="space-y-4">
-                  <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 border rounded-md" required />
-                  <input type="number" min="1" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} className="w-full px-3 py-2 border rounded-md" required />
-                  <input type="date" value={formData.expiryDate} onChange={e => setFormData({ ...formData, expiryDate: e.target.value })} className="w-full px-3 py-2 border rounded-md" required />
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <button type="button" onClick={() => setEditingItem(null)} className="px-4 py-2 bg-gray-300 rounded-md">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-md">Save Changes</button>
-                  </div>
-                </form>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );

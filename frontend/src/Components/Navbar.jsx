@@ -1,15 +1,21 @@
 // src/Components/Navbar.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-const Navbar = ({ isLoggedIn, handleLogout }) => {
+const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
   const location = useLocation();
 
   const isActiveLink = (path) =>
     location.pathname === path
       ? "text-emerald-400 font-semibold"
       : "text-white hover:text-emerald-300";
+
+  // Update login state on token change or navigation
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("token"));
+  }, [location]);
 
   return (
     <nav className="bg-green-600 shadow-md sticky top-0 z-50">
@@ -24,7 +30,9 @@ const Navbar = ({ isLoggedIn, handleLogout }) => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link to="/" className={isActiveLink("/")}>Home</Link>
+            <Link to="/" className={isActiveLink("/")}>
+              Home
+            </Link>
 
             {isLoggedIn ? (
               <>
@@ -35,9 +43,8 @@ const Navbar = ({ isLoggedIn, handleLogout }) => {
                   Fridge Info
                 </Link>
                 <Link to="/upload-bill" className="text-white hover:text-emerald-200">
-                Upload Bill
+                  Upload Bill
                 </Link>
-
                 <Link to="/history" className={isActiveLink("/history")}>
                   History
                 </Link>
@@ -47,8 +54,6 @@ const Navbar = ({ isLoggedIn, handleLogout }) => {
                 <Link to="/profile" className={isActiveLink("/profile")}>
                   Profile
                 </Link>
-                
-
               </>
             ) : (
               <>
@@ -68,7 +73,6 @@ const Navbar = ({ isLoggedIn, handleLogout }) => {
               onClick={() => setIsOpen(!isOpen)}
               className="text-white focus:outline-none"
             >
-              {/* Hamburger icon */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6"
@@ -117,14 +121,14 @@ const Navbar = ({ isLoggedIn, handleLogout }) => {
               >
                 Dashboard
               </Link>
-                <Link
+              <Link
                 to="/fridge-info"
                 className={`${isActiveLink("/fridge-info")} block`}
                 onClick={() => setIsOpen(false)}
               >
                 Fridge Info
               </Link>
-               <Link
+              <Link
                 to="/upload-bill"
                 className={`${isActiveLink("/upload-bill")} block`}
                 onClick={() => setIsOpen(false)}

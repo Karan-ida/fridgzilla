@@ -31,6 +31,13 @@ const Navbar = ({ isLoggedIn, handleLogout }) => {
                 <Link to="/dashboard" className={isActiveLink("/dashboard")}>
                   Dashboard
                 </Link>
+                <Link to="/fridge-info" className="text-white hover:text-emerald-200">
+                  Fridge Info
+                </Link>
+                <Link to="/upload-bill" className="text-white hover:text-emerald-200">
+                Upload Bill
+                </Link>
+
                 <Link to="/history" className={isActiveLink("/history")}>
                   History
                 </Link>
@@ -40,6 +47,8 @@ const Navbar = ({ isLoggedIn, handleLogout }) => {
                 <Link to="/profile" className={isActiveLink("/profile")}>
                   Profile
                 </Link>
+                
+
               </>
             ) : (
               <>
@@ -107,6 +116,20 @@ const Navbar = ({ isLoggedIn, handleLogout }) => {
                 onClick={() => setIsOpen(false)}
               >
                 Dashboard
+              </Link>
+                <Link
+                to="/fridge-info"
+                className={`${isActiveLink("/fridge-info")} block`}
+                onClick={() => setIsOpen(false)}
+              >
+                Fridge Info
+              </Link>
+               <Link
+                to="/upload-bill"
+                className={`${isActiveLink("/upload-bill")} block`}
+                onClick={() => setIsOpen(false)}
+              >
+                Upload Bill
               </Link>
               <Link
                 to="/history"

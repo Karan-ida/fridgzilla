@@ -1,18 +1,28 @@
 // backend/src/server.js
 import app from "./app.js";
 import sequelize from "./config/db.js";
-
-const PORT = process.env.PORT || 5000;
+import env from "./config/env.js";
+import "./scheduler/expiryNotification.js";
 
 const startServer = async () => {
   try {
     await sequelize.authenticate();
-    await sequelize.sync(); // sync models with DB
-    console.log("Database connected successfully");
+    console.log("✅ Database connected successfully");
 
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    // Sync tables → alter:true only in development
+    if (process.env.NODE_ENV === "development") {
+      await sequelize.sync({ alter: true });
+      console.log("🔧 Database synced with alter:true (development)");
+    } else {
+      await sequelize.sync();
+      console.log("🚀 Database synced (production)");
+    }
+
+    app.listen(env.port, () => {
+      console.log(`🌍 Server running on http://localhost:${env.port}`);
+    });
   } catch (err) {
-    console.error("Server failed:", err);
+    console.error("❌ Server failed to start:", err);
   }
 };
 

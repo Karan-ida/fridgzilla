@@ -1,12 +1,12 @@
 // backend/src/routes/userRoutes.js
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
+import {authenticate} from "../middlewares/authMiddleware.js";
 import User from "../models/User.js";
 
 const router = express.Router();
 
 // Protected route: Get user profile
-router.get("/profile", authMiddleware, async (req, res) => {
+router.get("/profile", authenticate, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: ["id", "name", "email"],

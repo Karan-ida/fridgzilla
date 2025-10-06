@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Profile from "./pages/Profile.jsx";
 import History from "./pages/History.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import FridgeInfo from "./pages/FridgeInfo.jsx";
 
 const App = () => {
   // Track whether user is logged in
@@ -51,6 +52,7 @@ const App = () => {
             <Route path="/upload-bill" element={<BillUpload />} />
             <Route path="/history" element={<History />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/fridge-info" element={<FridgeInfo />} />
           </Routes>
         </div>
       </div>

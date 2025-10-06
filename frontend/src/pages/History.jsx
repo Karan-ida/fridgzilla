@@ -1,302 +1,216 @@
+// frontend/src/pages/History.jsx
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import ItemCard from "../Components/ItemCard";
+import axios from "axios";
 
 const History = () => {
   const [items, setItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
-  const [activeFilter, setActiveFilter] = useState("all"); // all, consumed, expired, donated
-  const [dateRange, setDateRange] = useState("all"); // all, week, month, year
-  const [sortBy, setSortBy] = useState("date"); // date, name, category
+  const [expiryFilter, setExpiryFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("date");
+  const [editingItem, setEditingItem] = useState(null);
+  const [formData, setFormData] = useState({ name: "", quantity: "", expiryDate: "" });
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
 
-  // Sample historical data (replace with your actual data source)
-  const sampleItems = [
-    { 
-      name: "Apple", 
-      quantity: 5, 
-      expiryDate: "2025-09-15",
-      category: "Fruit",
-      addedDate: "2025-09-05",
-      status: "consumed",
-      consumedDate: "2025-09-12"
-    },
-    { 
-      name: "Banana", 
-      quantity: 12, 
-      expiryDate: "2025-09-12",
-      category: "Fruit",
-      addedDate: "2025-09-07",
-      status: "expired",
-      removedDate: "2025-09-13"
-    },
-    { 
-      name: "Carrot", 
-      quantity: 8, 
-      expiryDate: "2025-09-20",
-      category: "Vegetable",
-      addedDate: "2025-09-08",
-      status: "donated",
-      removedDate: "2025-09-15"
-    },
-    { 
-      name: "Milk", 
-      quantity: 1, 
-      expiryDate: "2025-09-10",
-      category: "Dairy",
-      addedDate: "2025-09-09",
-      status: "consumed",
-      consumedDate: "2025-09-10"
-    },
-    { 
-      name: "Bread", 
-      quantity: 1, 
-      expiryDate: "2025-09-08",
-      category: "Bakery",
-      addedDate: "2025-09-05",
-      status: "expired",
-      removedDate: "2025-09-09"
-    },
-    { 
-      name: "Yogurt", 
-      quantity: 4, 
-      expiryDate: "2025-09-14",
-      category: "Dairy",
-      addedDate: "2025-09-10",
-      status: "consumed",
-      consumedDate: "2025-09-13"
-    },
-  ];
-
-  // Fetch historical items
+  // Fetch all items on mount
   useEffect(() => {
-    // Replace this with your backend API call
-    const storedItems = JSON.parse(localStorage.getItem("historicalItems")) || sampleItems;
-    setItems(storedItems);
-    setFilteredItems(storedItems);
+    fetchItems();
   }, []);
 
-  // Apply filters
-  useEffect(() => {
-    let filtered = [...items];
-    
-    // Status filter
-    if (activeFilter !== "all") {
-      filtered = filtered.filter(item => item.status === activeFilter);
+  const fetchItems = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await axios.get("http://localhost:5000/api/items", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const itemsData = res.data.items || [];
+      setItems(itemsData);
+
+      // Extract unique categories
+      const uniqueCategories = [...new Set(itemsData.map(item => item.category || "Uncategorized"))];
+      setCategories(uniqueCategories);
+
+      setLoading(false);
+    } catch (err) {
+      console.error("Error loading items", err);
+      setLoading(false);
     }
-    
-    // Date range filter
-    const now = new Date();
-    if (dateRange !== "all") {
-      const days = dateRange === "week" ? 7 : dateRange === "month" ? 30 : 365;
-      const cutoffDate = new Date(now.setDate(now.getDate() - days));
-      
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.removedDate || item.consumedDate || item.addedDate);
-        return itemDate >= cutoffDate;
+  };
+
+  // Filter and sort items whenever dependencies change
+  useEffect(() => {
+    const today = new Date();
+    let filtered = [...items];
+
+    // Expiry filter
+    if (expiryFilter !== "all") {
+      filtered = filtered.filter((item) => {
+        if (!item.expiryDate) return false;
+        const exp = new Date(item.expiryDate);
+        if (expiryFilter === "expired") return exp < today;
+        if (expiryFilter === "valid") return exp >= today;
+        return true;
       });
     }
-    
+
+    // Category filter
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter(item => (item.category || "Uncategorized") === categoryFilter);
+    }
+
     // Sorting
     filtered.sort((a, b) => {
-      const dateA = new Date(a.removedDate || a.consumedDate || a.addedDate);
-      const dateB = new Date(b.removedDate || b.consumedDate || b.addedDate);
-      
-      if (sortBy === "date") {
-        return dateB - dateA; // Newest first
-      } else if (sortBy === "name") {
-        return a.name.localeCompare(b.name);
-      } else {
-        return a.category.localeCompare(b.category);
-      }
+      if (sortBy === "date") return new Date(a.expiryDate) - new Date(b.expiryDate);
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "quantity") return b.quantity - a.quantity;
+      return 0;
     });
-    
+
     setFilteredItems(filtered);
-  }, [items, activeFilter, dateRange, sortBy]);
+  }, [items, expiryFilter, categoryFilter, sortBy]);
 
-  // Get stats for summary cards
-  const getStats = () => {
-    const totalItems = items.length;
-    const consumed = items.filter(item => item.status === "consumed").length;
-    const expired = items.filter(item => item.status === "expired").length;
-    const donated = items.filter(item => item.status === "donated").length;
-    
-    return { totalItems, consumed, expired, donated };
+  const handleEditClick = (item) => {
+    setEditingItem(item);
+    setFormData({
+      name: item.name,
+      quantity: item.quantity,
+      expiryDate: item.expiryDate ? item.expiryDate.split("T")[0] : "",
+    });
   };
 
-  const stats = getStats();
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`http://localhost:5000/api/items/${editingItem.id}`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchItems();
+      setEditingItem(null);
+    } catch (err) {
+      console.error("Update failed:", err);
+    }
+  };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      consumed: { color: "bg-green-100 text-green-800", text: "Consumed" },
-      expired: { color: "bg-red-100 text-red-800", text: "Expired" },
-      donated: { color: "bg-blue-100 text-blue-800", text: "Donated" }
-    };
-    
+  const handleDelete = async (itemId) => {
+    if (!window.confirm("Are you sure you want to delete this item?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/items/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchItems();
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
+
+  const getExpiryStatus = (expiryDate) => {
+    if (!expiryDate) return { status: "unknown", text: "No Date", color: "bg-gray-200 text-gray-800" };
+    const today = new Date();
+    const exp = new Date(expiryDate);
+    const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return { status: "expired", text: "Expired", color: "bg-red-100 text-red-800" };
+    if (diffDays <= 3) return { status: "soon", text: "Expiring soon", color: "bg-orange-100 text-orange-800" };
+    return { status: "valid", text: "Valid", color: "bg-green-100 text-green-800" };
+  };
+
+  if (loading) {
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[status].color}`}>
-        {statusConfig[status].text}
-      </span>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+        <p className="text-gray-500 text-lg">Loading items...</p>
+      </div>
     );
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">Reports & History</h1>
-            <p className="text-gray-600 mt-2">Track your food consumption and waste reduction progress</p>
-          </div>
-
-          {/* Stats Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <motion.div 
-              whileHover={{ y: -5 }}
-              className="bg-white rounded-xl p-4 shadow-md text-center"
-            >
-              <div className="text-2xl font-bold text-emerald-600">{stats.totalItems}</div>
-              <div className="text-sm text-gray-500">Total Items</div>
-            </motion.div>
-            
-            <motion.div 
-              whileHover={{ y: -5 }}
-              className="bg-white rounded-xl p-4 shadow-md text-center"
-            >
-              <div className="text-2xl font-bold text-green-600">{stats.consumed}</div>
-              <div className="text-sm text-gray-500">Consumed</div>
-            </motion.div>
-            
-            <motion.div 
-              whileHover={{ y: -5 }}
-              className="bg-white rounded-xl p-4 shadow-md text-center"
-            >
-              <div className="text-2xl font-bold text-red-600">{stats.expired}</div>
-              <div className="text-sm text-gray-500">Expired</div>
-            </motion.div>
-            
-            <motion.div 
-              whileHover={{ y: -5 }}
-              className="bg-white rounded-xl p-4 shadow-md text-center"
-            >
-              <div className="text-2xl font-bold text-blue-600">{stats.donated}</div>
-              <div className="text-sm text-gray-500">Donated</div>
-            </motion.div>
-          </div>
+      <div className="max-w-7xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Item History</h1>
+          <p className="text-gray-600 mb-6">Manage and track your food items</p>
 
           {/* Filters */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-            <div className="bg-gradient-to-r from-emerald-500 to-green-600 py-4 px-6">
-              <h2 className="text-xl font-semibold text-white">Filters</h2>
+          <div className="bg-white rounded-2xl shadow-md mb-8 p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Status</label>
+              <div className="flex flex-wrap gap-2">
+                {["all", "valid", "expired"].map(f => (
+                  <button key={f} onClick={() => setExpiryFilter(f)} className={`px-4 py-2 rounded-full text-sm font-medium ${expiryFilter === f ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
-            
-            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Status Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <div className="flex flex-wrap gap-2">
-                  {["all", "consumed", "expired", "donated"].map(status => (
-                    <button
-                      key={status}
-                      onClick={() => setActiveFilter(status)}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        activeFilter === status 
-                          ? "bg-emerald-500 text-white" 
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {status === "all" ? "All" : status.charAt(0).toUpperCase() + status.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Date Range Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
-                <select
-                  value={dateRange}
-                  onChange={(e) => setDateRange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                >
-                  <option value="all">All Time</option>
-                  <option value="week">Past Week</option>
-                  <option value="month">Past Month</option>
-                  <option value="year">Past Year</option>
-                </select>
-              </div>
-              
-              {/* Sort Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                >
-                  <option value="date">Date (Newest)</option>
-                  <option value="name">Name</option>
-                  <option value="category">Category</option>
-                </select>
-              </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                <option value="all">All Categories</option>
+                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                <option value="date">Expiry Date</option>
+                <option value="name">Name</option>
+                <option value="quantity">Quantity</option>
+              </select>
             </div>
           </div>
 
-          {/* Results */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-500 to-green-600 py-4 px-6 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-white">
-                Historical Items ({filteredItems.length})
-              </h2>
-              <span className="text-emerald-100 text-sm">
-                {activeFilter !== "all" ? `Filtered by: ${activeFilter}` : "Showing all items"}
-              </span>
-            </div>
-            
-            <div className="p-6">
+          {/* Items Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AnimatePresence>
               {filteredItems.length === 0 ? (
-                <div className="text-center py-12">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <h3 className="text-lg font-medium text-gray-500 mt-4">No items found</h3>
-                  <p className="text-gray-400">Try adjusting your filters to see more results</p>
-                </div>
+                <p className="text-gray-500 col-span-full text-center py-6">No items found.</p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredItems.map((item, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-                    >
+                filteredItems.map(item => {
+                  const status = getExpiryStatus(item.expiryDate);
+                  return (
+                    <motion.div key={item.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="border rounded-lg overflow-hidden shadow hover:shadow-md">
                       <ItemCard item={item} showDetails />
-                      <div className="p-4 bg-gray-50 border-t border-gray-200">
-                        <div className="flex justify-between items-center">
-                          {getStatusBadge(item.status)}
-                          <span className="text-xs text-gray-500">
-                            {new Date(item.removedDate || item.consumedDate || item.addedDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {item.status === "consumed" && item.consumedDate && (
-                          <p className="text-xs text-gray-600 mt-2">
-                            Consumed on: {new Date(item.consumedDate).toLocaleDateString()}
-                          </p>
-                        )}
+                      <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>{status.text}</span>
+                        <span className="text-xs text-gray-500">{item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "N/A"}</span>
+                      </div>
+                      <div className="p-4 flex space-x-2">
+                        <button onClick={() => handleEditClick(item)} className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600">Edit</button>
+                        <button onClick={() => handleDelete(item.id)} className="flex-1 bg-red-500 text-white py-2 rounded-md hover:bg-red-600">Delete</button>
                       </div>
                     </motion.div>
-                  ))}
-                </div>
+                  );
+                })
               )}
-            </div>
+            </AnimatePresence>
           </div>
         </motion.div>
+
+        {/* Edit Modal */}
+        <AnimatePresence>
+          {editingItem && (
+            <motion.div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <motion.div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md" initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}>
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Edit Item</h2>
+                <form onSubmit={handleUpdate} className="space-y-4">
+                  <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 border rounded-md" required />
+                  <input type="number" min="1" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} className="w-full px-3 py-2 border rounded-md" required />
+                  <input type="date" value={formData.expiryDate} onChange={e => setFormData({ ...formData, expiryDate: e.target.value })} className="w-full px-3 py-2 border rounded-md" required />
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button type="button" onClick={() => setEditingItem(null)} className="px-4 py-2 bg-gray-300 rounded-md">Cancel</button>
+                    <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-md">Save Changes</button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

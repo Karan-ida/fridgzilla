@@ -1,39 +1,116 @@
+
+// frontend/src/pages/Profile.jsx
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { FiEdit2, FiCamera, FiLock, FiTrash2, FiLogOut } from "react-icons/fi";
 
 const Profile = () => {
   const [user, setUser] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [passwords, setPasswords] = useState({ current: "", new: "" });
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Simulate API call to fetch user data
-    setTimeout(() => {
-      const storedUser = JSON.parse(localStorage.getItem("user")) || {
-        name: "John Doe",
-        email: "johndoe@example.com",
-        phone: "+1 (555) 123-4567",
-        joinDate: "January 15, 2023",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-      };
-      setUser(storedUser);
-      setEditedUser(storedUser);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+    const token = localStorage.getItem("token");
+    if (!token) return navigate("/login");
 
-  const handleSave = () => {
-    // Simulate API call to update user data
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      setEditedUser(parsedUser);
+    } else {
+      axios
+        .get("http://localhost:5000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => {
+          // ✅ Some backends return { user: {...} } and others return {...}
+          const fetchedUser = res.data.user || res.data;
+          setUser(fetchedUser);
+          setEditedUser(fetchedUser);
+          localStorage.setItem("user", JSON.stringify(fetchedUser));
+        })
+        .catch((err) => {
+          console.error(err);
+          if (err.response?.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            navigate("/login");
+          }
+        });
+    }
+  }, [navigate]);
+
+  const handleSave = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
     setIsLoading(true);
-    setTimeout(() => {
-      localStorage.setItem("user", JSON.stringify(editedUser));
-      setUser(editedUser);
+    try {
+      const res = await axios.put(
+        "http://localhost:5000/api/auth/update",
+        editedUser,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const updatedUser = res.data.user || res.data;
+      setUser(updatedUser);
+      setEditedUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
       setIsEditing(false);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update profile.");
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setIsLoading(true);
+    try {
+      await axios.put(
+        "http://localhost:5000/api/auth/change-password",
+        passwords,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Password changed successfully!");
+      setPasswords({ current: "", new: "" });
+      setShowPasswordModal(false);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to change password.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setIsLoading(true);
+    try {
+      await axios.delete("http://localhost:5000/api/auth/delete", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Account deleted successfully.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete account.");
+    } finally {
+      setIsLoading(false);
+      setShowDeleteModal(false);
+    }
   };
 
   const handleLogout = () => {
@@ -42,172 +119,221 @@ const Profile = () => {
     navigate("/login");
   };
 
-  if (isLoading && !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-        <div className="flex flex-col items-center">
-          <svg className="animate-spin h-12 w-12 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p className="mt-4 text-gray-600">Loading your profile...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const avatarData = reader.result;
+      setEditedUser({ ...editedUser, avatar: avatarData });
+      const updatedUser = { ...user, avatar: avatarData };
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (!user) return <p className="text-center mt-20">Loading profile...</p>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-100 to-emerald-200 py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
         className="max-w-4xl mx-auto"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Profile Header */}
-          <div className="bg-gradient-to-r from-emerald-500 to-green-600 py-8 px-6 text-center">
-            <div className="relative inline-block">
+        {/* Profile Card */}
+        <div className="backdrop-blur-lg bg-white/70 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-500 to-green-600 py-10 px-6 text-center relative">
+            <label className="relative inline-block cursor-pointer group">
               <img
-                className="h-24 w-24 rounded-full border-4 border-white shadow-md mx-auto"
-                src={user.avatar}
+                className="h-32 w-32 rounded-full border-4 border-white shadow-md mx-auto object-cover"
+                src={user.avatar || "https://i.pravatar.cc/150"}
                 alt={user.name}
               />
-              <button className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            </div>
-            <h1 className="text-2xl font-bold text-white mt-4">{user.name}</h1>
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition">
+                <FiCamera className="text-white text-2xl" />
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </label>
+            <h2 className="mt-4 text-2xl font-bold text-white">{user.name}</h2>
             <p className="text-emerald-100">{user.email}</p>
-            <p className="text-emerald-100 text-sm mt-1">Member since {user.joinDate}</p>
           </div>
 
-          {/* Profile Content */}
-          <div className="px-8 py-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Profile Information</h2>
+          <div className="px-8 py-6 space-y-6">
+            {/* Editable fields */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-800">
+                Profile Information
+              </h2>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="flex items-center text-emerald-600 hover:text-emerald-700 transition-colors"
+                className="text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
               >
-                {isEditing ? (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Cancel
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Edit Profile
-                  </>
-                )}
+                <FiEdit2 /> {isEditing ? "Cancel" : "Edit"}
               </button>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            {["name", "email", "phone"].map((field) => (
+              <div key={field}>
+                <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                  {field}
+                </label>
                 {isEditing ? (
                   <input
-                    type="text"
-                    value={editedUser.name}
-                    onChange={(e) => setEditedUser({...editedUser, name: e.target.value})}
+                    type={field === "email" ? "email" : "text"}
+                    value={editedUser[field] || ""}
+                    onChange={(e) =>
+                      setEditedUser({ ...editedUser, [field]: e.target.value })
+                    }
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
                   />
                 ) : (
-                  <p className="text-gray-600">{user.name}</p>
+                  <p className="text-gray-600">
+                    {user[field] || "Not provided"}
+                  </p>
                 )}
               </div>
+            ))}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    value={editedUser.email}
-                    onChange={(e) => setEditedUser({...editedUser, email: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
-                  />
-                ) : (
-                  <p className="text-gray-600">{user.email}</p>
-                )}
-              </div>
+            {isEditing && (
+              <motion.button
+                onClick={handleSave}
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white py-3 px-4 rounded-md shadow-md hover:shadow-lg transition-all"
+              >
+                {isLoading ? "Saving..." : "Save Changes"}
+              </motion.button>
+            )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    value={editedUser.phone}
-                    onChange={(e) => setEditedUser({...editedUser, phone: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
-                  />
-                ) : (
-                  <p className="text-gray-600">{user.phone}</p>
-                )}
-              </div>
-
-              {isEditing && (
-                <motion.button
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  onClick={handleSave}
-                  disabled={isLoading}
-                  className="w-full bg-emerald-600 text-white py-3 px-4 rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </motion.button>
-              )}
-            </div>
-          </div>
-
-          {/* Account Actions */}
-          <div className="px-8 py-6 bg-gray-50 rounded-b-2xl">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Account Actions</h3>
-            <div className="space-y-4">
-              <button className="w-full text-left flex items-center text-blue-600 hover:text-blue-700 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-                Change Password
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="flex items-center justify-center gap-2 w-full bg-blue-500 text-white py-3 px-4 rounded-lg shadow hover:bg-blue-600 transition"
+              >
+                <FiLock /> Change Password
               </button>
-              
-              <button className="w-full text-left flex items-center text-yellow-600 hover:text-yellow-700 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Delete Account
+
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="flex items-center justify-center gap-2 w-full bg-red-500 text-white py-3 px-4 rounded-lg shadow hover:bg-red-600 transition"
+              >
+                <FiTrash2 /> Delete Account
               </button>
-              
-              <button 
+
+              <button
                 onClick={handleLogout}
-                className="w-full text-left flex items-center text-red-600 hover:text-red-700 transition-colors"
+                className="flex items-center justify-center gap-2 w-full bg-gray-600 text-white py-3 px-4 rounded-lg shadow hover:bg-gray-700 transition"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Logout
+                <FiLogOut /> Logout
               </button>
             </div>
           </div>
         </div>
+
+        {/* Password Modal */}
+        <AnimatePresence>
+          {showPasswordModal && (
+            <motion.div
+              className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg"
+              >
+                <h3 className="text-lg font-semibold mb-4">
+                  Change Password
+                </h3>
+                <input
+                  type="password"
+                  placeholder="Current Password"
+                  value={passwords.current}
+                  onChange={(e) =>
+                    setPasswords({ ...passwords, current: e.target.value })
+                  }
+                  className="w-full mb-3 px-4 py-2 border rounded-md"
+                />
+                <input
+                  type="password"
+                  placeholder="New Password"
+                  value={passwords.new}
+                  onChange={(e) =>
+                    setPasswords({ ...passwords, new: e.target.value })
+                  }
+                  className="w-full mb-4 px-4 py-2 border rounded-md"
+                />
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowPasswordModal(false)}
+                    className="px-4 py-2 rounded-md border"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleChangePassword}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                  >
+                    Save
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Delete Modal */}
+        <AnimatePresence>
+          {showDeleteModal && (
+            <motion.div
+              className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg"
+              >
+                <h3 className="text-lg font-semibold mb-4">
+                  Confirm Delete Account
+                </h3>
+                <p className="mb-4 text-gray-600">
+                  Are you sure you want to permanently delete your account? This
+                  action cannot be undone.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-2 rounded-md border"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

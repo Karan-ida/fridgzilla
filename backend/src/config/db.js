@@ -1,11 +1,10 @@
 // backend/src/config/db.js
 import { Sequelize } from "sequelize";
-import dotenv from "dotenv";
-dotenv.config();
+import env from "./env.js";
 
-const sequelize = new Sequelize(process.env.DB_URL, {
+const sequelize = new Sequelize(env.dbUrl, {
   dialect: "postgres",
-  logging: false,
+  logging: false, // change to console.log if you want query logs
 });
 
 export default sequelize;

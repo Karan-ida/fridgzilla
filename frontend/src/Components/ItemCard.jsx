@@ -11,7 +11,7 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
       : ""
   );
   const [editExpiry, setEditExpiry] = useState(
-    new Date(item.expiryDate).toISOString().split("T")[0]
+    item.expiryDate ? new Date(item.expiryDate).toISOString().split("T")[0] : ""
   );
 
   const handleSave = () => {
@@ -25,8 +25,29 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
     setIsEditing(false);
   };
 
+  // Determine badge text and color
+  const getBadge = () => {
+    if (item.smsNotified) {
+      return (
+        <span className="bg-green-200 text-green-800 px-2 py-1 text-xs rounded-full">
+          SMS Sent
+        </span>
+      );
+    } else if (new Date(item.expiryDate) - new Date() <= 24 * 60 * 60 * 1000) {
+      return (
+        <span className="bg-yellow-200 text-yellow-800 px-2 py-1 text-xs rounded-full">
+          SMS Pending
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className="border p-4 rounded shadow hover:shadow-lg transition bg-white">
+    <div className="border p-4 rounded shadow hover:shadow-lg transition bg-white relative">
+      {/* Badge */}
+      <div className="absolute top-2 right-2">{getBadge()}</div>
+
       {isEditing ? (
         <div className="space-y-2">
           {/* Name */}
@@ -85,11 +106,15 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
 
           {/* Show purchase + expiry dates */}
           {item.purchaseDate && (
-            <p>Purchase Date: {new Date(item.purchaseDate).toLocaleDateString()}</p>
+            <p>
+              Purchase Date: {new Date(item.purchaseDate).toLocaleDateString()}
+            </p>
           )}
-          <p className="text-red-600 font-medium">
-            Expiry Date: {new Date(item.expiryDate).toLocaleDateString()}
-          </p>
+          {item.expiryDate && (
+            <p className="text-red-600 font-medium">
+              Expiry Date: {new Date(item.expiryDate).toLocaleDateString()}
+            </p>
+          )}
 
           {/* Edit / Delete */}
           <div className="flex justify-between mt-2">

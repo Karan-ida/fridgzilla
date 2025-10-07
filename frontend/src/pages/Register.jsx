@@ -111,7 +111,7 @@ const Register = () => {
               </div>
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-green-700 bg-clip-text text-transparent">
-                  Fridgzilla
+                  Fridgella
                 </h1>
                 <p className="text-slate-600 text-sm">Smart Food Management</p>
               </div>

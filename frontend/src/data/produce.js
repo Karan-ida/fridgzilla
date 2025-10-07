@@ -1,6 +1,6 @@
 const produceData = {
   fruits: [
-    { name: "Apple", shelfLifeDays: 30 },
+    { name: "Apple", shelfLifeDays: 6 },
     { name: "Banana", shelfLifeDays: 5 },
     { name: "Orange", shelfLifeDays: 21 },
     { name: "Grapes", shelfLifeDays: 7 },

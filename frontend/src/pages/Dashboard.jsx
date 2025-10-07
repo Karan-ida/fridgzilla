@@ -305,26 +305,21 @@ const Dashboard = () => {
 >
                     <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 overflow-hidden">
                       <ItemCard item={item} />
-                      
                       {/* Action Buttons */}
-                      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => setEditItem(item)}
-                          className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-md transition-colors"
-                        >
-                          <FaEdit className="h-3 w-3" />
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleDelete(item.id)}
-                          className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md transition-colors"
-                        >
-                          <FaTrash className="h-3 w-3" />
-                        </motion.button>
-                      </div>
+                    <div className="absolute bottom-4 right-2 flex gap-2 opacity-100 group-hover:opacity-100 transition-opacity duration-300">
+                    <button
+                      onClick={() => handleEditClick(item)}
+                      className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors"
+                    >
+                    Edit
+                    </button>
+                    <button
+                     onClick={() => handleDelete(item.id)}
+                     className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors"
+                    >
+                     Delete
+                    </button>
+                    </div>
 
                       {/* Status Badge */}
                       <div className="absolute top-12 right-2">
@@ -416,16 +411,16 @@ const Dashboard = () => {
 
                 <div className="flex justify-end gap-3 mt-8">
                   <button
-                    onClick={() => setEditItem(null)}
-                    className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
                     onClick={handleSave}
                     className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     Save Changes
+                  </button>
+                  <button
+                    onClick={() => setEditItem(null)}
+                    className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                  >
+                    Cancel
                   </button>
                 </div>
               </motion.div>

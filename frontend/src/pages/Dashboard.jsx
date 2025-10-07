@@ -176,21 +176,6 @@ const Dashboard = () => {
             className="mb-8"
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-2 rounded-xl shadow-lg">
-                    <ChefHat className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-green-700 bg-clip-text text-transparent">
-                      Fridgzilla
-                    </h1>
-                    <p className="text-slate-600 text-sm mt-1">Smart Food Management System</p>
-                  </div>
-                </div>
-                <p className="text-slate-600 text-lg">Track your items, expiry dates & keep food fresh!</p>
-              </div>
-              
               <div className="flex items-center gap-3">
                 <motion.button
                   whileHover={{ scale: 1.05 }}

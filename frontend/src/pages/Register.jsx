@@ -104,19 +104,6 @@ const Register = () => {
           className="hidden lg:block"
         >
           <div className="space-y-8">
-            {/* Brand */}
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-3 rounded-2xl shadow-lg">
-                <ChefHat className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-green-700 bg-clip-text text-transparent">
-                  Fridgella
-                </h1>
-                <p className="text-slate-600 text-sm">Smart Food Management</p>
-              </div>
-            </div>
-
             {/* Benefits */}
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-slate-800">

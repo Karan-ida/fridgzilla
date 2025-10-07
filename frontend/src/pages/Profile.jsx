@@ -203,11 +203,6 @@ const Profile = () => {
         >
           {/* Header Section */}
           <div className="relative bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 py-12 px-8 text-center">
-            <div className="absolute top-6 right-6">
-              <div className="bg-white/20 p-2 rounded-full">
-                <ChefHat className="h-5 w-5 text-white" />
-              </div>
-            </div>
             
             <div className="space-y-4">
               <label className="relative inline-block cursor-pointer group">
@@ -261,7 +256,7 @@ const Profile = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1  gap-6">
                   {[
                     { key: "name", label: "Full Name", icon: <FiUser className="h-4 w-4" />, type: "text" },
                     { key: "email", label: "Email Address", icon: <FiMail className="h-4 w-4" />, type: "email" },
@@ -359,23 +354,6 @@ const Profile = () => {
                   </motion.div>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="border-t border-slate-200 px-8 py-6 bg-slate-50/50">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Shield className="h-4 w-4" />
-                <span>Your data is securely encrypted</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors shadow-lg hover:shadow-xl"
-              >
-                <FiLogOut className="h-4 w-4" />
-                Logout
-              </button>
             </div>
           </div>
         </motion.div>

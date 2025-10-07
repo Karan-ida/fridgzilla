@@ -88,19 +88,6 @@ const Login = ({ handleLogin }) => {
           className="hidden lg:block"
         >
           <div className="space-y-8">
-            {/* Brand */}
-            <div className="flex items-center space-x-3">
-              <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-3 rounded-2xl shadow-lg">
-                <ChefHat className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-green-700 bg-clip-text text-transparent">
-                  Fridgzilla
-                </h1>
-                <p className="text-slate-600 text-sm">Smart Food Management</p>
-              </div>
-            </div>
-
             {/* Features List */}
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-slate-800">
@@ -120,22 +107,6 @@ const Login = ({ handleLogin }) => {
                     <span className="text-slate-700">{item.text}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Testimonial */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-emerald-100">
-              <p className="text-slate-600 italic mb-4">
-                "Fridgzilla helped me reduce my food waste by 40%! The expiry reminders are a lifesaver."
-              </p>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                  S
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-800">Sarah Johnson</p>
-                  <p className="text-sm text-slate-500">Home Cook</p>
-                </div>
               </div>
             </div>
           </div>

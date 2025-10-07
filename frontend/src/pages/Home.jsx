@@ -68,52 +68,6 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50/30">
-      {/* Navigation Bar */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-emerald-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <motion.div 
-              className="flex items-center space-x-2"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
-              <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-2 rounded-lg">
-                <ChefHat className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-green-700 bg-clip-text text-transparent">
-                Fridgzilla
-              </span>
-            </motion.div>
-
-            <div className="flex items-center space-x-4">
-              {isLoggedIn ? (
-                <Link
-                  to="/dashboard"
-                  className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-2 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                >
-                  Go to Dashboard
-                </Link>
-              ) : (
-                <div className="flex space-x-3">
-                  <Link
-                    to="/login"
-                    className="text-emerald-600 hover:text-emerald-700 font-medium px-4 py-2 rounded-full hover:bg-emerald-50 transition-colors"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-2 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                  >
-                    Get Started Free
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* Hero Section */}
       <section className="relative py-20 px-6 overflow-hidden">
         <div className="max-w-7xl mx-auto text-center">

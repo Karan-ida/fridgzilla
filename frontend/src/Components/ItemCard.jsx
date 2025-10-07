@@ -116,21 +116,6 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
             </p>
           )}
 
-          {/* Edit / Delete */}
-          <div className="flex justify-between mt-2">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-            >
-              Edit
-            </button>
-            <button
-              onClick={onRemove}
-              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-            >
-              Delete
-            </button>
-          </div>
         </div>
       )}
     </div>

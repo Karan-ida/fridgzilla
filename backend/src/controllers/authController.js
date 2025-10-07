@@ -18,7 +18,8 @@ export const register = async (req, res) => {
     }
     if (!validatePassword(password)) {
       return res.status(400).json({
-        message: "Password must be at least 8 characters, include 1 uppercase, 1 number, and 1 special character.",
+        message:
+          "Password must be at least 8 characters, include 1 uppercase, 1 number, and 1 special character.",
       });
     }
 
@@ -46,24 +47,15 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check email
     const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(400).json({ message: "Invalid email or password." });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid email or password." });
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password." });
-    }
+    if (!isMatch) return res.status(400).json({ message: "Invalid email or password." });
 
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
 
     res.status(200).json({ message: "Login successful.", token, user });
   } catch (err) {
@@ -75,32 +67,36 @@ export const login = async (req, res) => {
 // ================== UPDATE PROFILE ==================
 export const updateProfile = async (req, res) => {
   try {
-    const userId = req.user.id; // from auth middleware
+    const userId = req.user.id;
     const { name, email, phone, avatar } = req.body;
-
-    // Validate inputs
-    if (name && !validateName(name)) {
-      return res.status(400).json({ message: "Name must be at least 2 letters." });
-    }
-    if (email && !validateEmail(email)) {
-      return res.status(400).json({ message: "Invalid email format." });
-    }
 
     // Find user
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ message: "User not found." });
 
-    // Check if new email already exists
-    if (email && email !== user.email) {
-      const existingEmail = await User.findOne({ where: { email } });
-      if (existingEmail) {
-        return res.status(400).json({ message: "Email already exists." });
+    // Validate and update name
+    if (name) {
+      if (!validateName(name)) {
+        return res.status(400).json({ message: "Name must be at least 2 letters." });
       }
+      user.name = name;
     }
 
-    // Update fields
-    if (name) user.name = name;
-    if (email) user.email = email;
+    // Validate and update email
+    if (email) {
+      if (!validateEmail(email)) {
+        return res.status(400).json({ message: "Invalid email format." });
+      }
+      if (email !== user.email) {
+        const existingEmail = await User.findOne({ where: { email } });
+        if (existingEmail) {
+          return res.status(400).json({ message: "Email already exists." });
+        }
+      }
+      user.email = email;
+    }
+
+    // Update phone and avatar if provided
     if (phone) user.phone = phone;
     if (avatar) user.avatar = avatar;
 
@@ -109,6 +105,34 @@ export const updateProfile = async (req, res) => {
     res.status(200).json({ message: "Profile updated successfully.", user });
   } catch (err) {
     console.error("Update profile error:", err);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+// ================== UPDATE AVATAR ==================
+export const updateAvatar = async (req, res) => {
+  try {
+    const userId = req.user.id; // from auth middleware
+    const { avatar } = req.body;
+
+    if (!avatar) {
+      return res.status(400).json({ message: "Avatar URL or image is required." });
+    }
+
+    // Find user
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    // Update avatar field
+    user.avatar = avatar;
+    await user.save();
+
+    res.status(200).json({
+      message: "Avatar updated successfully.",
+      user,
+    });
+  } catch (err) {
+    console.error("Avatar update error:", err);
     res.status(500).json({ message: "Server error." });
   }
 };

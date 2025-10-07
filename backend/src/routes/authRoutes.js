@@ -4,19 +4,23 @@ import {
   register,
   login,
   updateProfile,
+  updateAvatar, // ✅ import new controller
 } from "../controllers/authController.js";
 import { authenticate } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Public routes
+// 🟢 Public routes
 router.post("/register", register);
 router.post("/login", login);
 
-// Protected routes
+// 🔒 Protected routes
 router.put("/update", authenticate, updateProfile);
 
-// Get logged-in user details (for testing auth)
+// ✅ New route to update user avatar
+router.put("/avatar", authenticate, updateAvatar);
+
+// 🧩 For verifying logged-in user
 router.get("/me", authenticate, (req, res) => {
   res.status(200).json({ message: "Authenticated user", user: req.user });
 });

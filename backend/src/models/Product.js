@@ -22,8 +22,4 @@ const Product = sequelize.define("Product", {
   },
 });
 
-// Associations
-Product.belongsTo(User, { as: "user", foreignKey: "userId" });
-User.hasMany(Product, { as: "products", foreignKey: "userId" });
-
 export default Product;

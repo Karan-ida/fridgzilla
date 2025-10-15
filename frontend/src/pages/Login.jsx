@@ -226,13 +226,11 @@ const Login = ({ handleLogin }) => {
                     </div>
                     <span className="text-sm text-slate-700">Remember me</span>
                   </label>
-
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm font-medium text-emerald-600 hover:text-emerald-500 transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
+                  <p className="mt-2 text-sm">
+                    <a href="/forgot-password" className="text-blue-500 hover:underline">
+                      Forgot Password?
+                    </a>
+                  </p>
                 </div>
 
                 {/* Submit Button */}

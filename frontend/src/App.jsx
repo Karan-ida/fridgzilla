@@ -11,6 +11,9 @@ import Profile from "./pages/Profile.jsx";
 import History from "./pages/History.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import FridgeInfo from "./pages/FridgeInfo.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
+
 
 const App = () => {
   // Track whether user is logged in
@@ -53,6 +56,8 @@ const App = () => {
             <Route path="/history" element={<History />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/fridge-info" element={<FridgeInfo />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
           </Routes>
         </div>
       </div>

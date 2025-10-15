@@ -293,11 +293,12 @@ const Dashboard = () => {
                       {/* Action Buttons */}
                     <div className="absolute bottom-4 right-2 flex gap-2 opacity-100 group-hover:opacity-100 transition-opacity duration-300">
                     <button
-                      onClick={() => handleEditClick(item)}
-                      className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors"
+                    onClick={() => setEditItem(item)}
+                    className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors"
                     >
                     Edit
                     </button>
+
                     <button
                      onClick={() => handleDelete(item.id)}
                      className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors"

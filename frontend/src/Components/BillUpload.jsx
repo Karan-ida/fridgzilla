@@ -27,7 +27,7 @@ const BillUpload = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState("");
-
+  const [manualUnit, setManualUnit] = useState("unit");
   const [manualName, setManualName] = useState("");
   const [manualQty, setManualQty] = useState(1);
   const [manualPurchaseDate, setManualPurchaseDate] = useState("");
@@ -55,7 +55,6 @@ const BillUpload = () => {
     return expiry;
   };
 
-  // Auto-suggestions for manual entry
   useEffect(() => {
     if (!manualName) {
       setSuggestions([]);
@@ -69,12 +68,47 @@ const BillUpload = () => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
-      // Create preview URL
       const url = URL.createObjectURL(selectedFile);
       setPreviewUrl(url);
     }
   };
 
+  // OCR preprocessing
+  const preprocessImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => { img.src = e.target.result; };
+      reader.onerror = reject;
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const scale = 2;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const avg = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+          const contrast = ((avg - 128) * 1.2) + 128;
+          const value = contrast > 140 ? 255 : 0;
+          data[i] = data[i + 1] = data[i + 2] = value;
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      };
+
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Parse OCR text and extract quantity + unit
   const parseBillText = (text, today) => {
     return text
       .split("\n")
@@ -82,9 +116,27 @@ const BillUpload = () => {
         const lower = line.toLowerCase();
         const found = PRODUCE.find(p => lower.includes(p.name.toLowerCase()));
         if (found) {
+          const quantityMatch = line.match(/(\d+(\.\d+)?)(\s?(kg|g|pcs|x|unit|nos)?)?/i);
+          let qty = 1;
+          let unit = "unit";
+
+          if (quantityMatch) {
+            const num = parseFloat(quantityMatch[1]);
+            qty = isNaN(num) ? 1 : num;
+
+            if (quantityMatch[4]) {
+              if (quantityMatch[4].toLowerCase() === "x" || quantityMatch[4].toLowerCase() === "nos") {
+                unit = "unit";
+              } else {
+                unit = quantityMatch[4].toLowerCase();
+              }
+            }
+          }
+
           return {
             name: found.name,
-            quantity: 1,
+            quantity: qty,
+            unit,
             purchaseDate: today,
             expiryDate: calculateExpiry(today, found.name),
             category: found.category,
@@ -101,17 +153,20 @@ const BillUpload = () => {
     setTimeout(() => setToast({ message: "", type: "" }), 4000);
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) return;
     setLoading(true);
     setProgress(0);
 
-    Tesseract.recognize(file, "eng", {
-      logger: (m) => {
-        if (m.status === "recognizing text") setProgress(Math.round(m.progress * 100));
-      },
-    })
-      .then(async ({ data: { text } }) => {
+    try {
+      const processedDataUrl = await preprocessImage(file);
+
+      Tesseract.recognize(processedDataUrl, "eng", {
+        tessedit_char_whitelist: "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ kgpcsx.",
+        logger: (m) => {
+          if (m.status === "recognizing text") setProgress(Math.round(m.progress * 100));
+        },
+      }).then(async ({ data: { text } }) => {
         const today = new Date();
         const parsedItems = parseBillText(text, today);
 
@@ -131,12 +186,12 @@ const BillUpload = () => {
         setProgress(100);
         setFile(null);
         setPreviewUrl("");
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-        showToast("Error processing the file.", "error");
       });
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+      showToast("Error processing the file.", "error");
+    }
   };
 
   const handleAddManual = async () => {
@@ -150,6 +205,7 @@ const BillUpload = () => {
         {
           name: manualName,
           quantity: manualQty,
+          unit: manualUnit,
           expiryDate,
           category: manualCategory,
           purchaseDate: new Date(manualPurchaseDate),
@@ -158,7 +214,7 @@ const BillUpload = () => {
       );
 
       if (res.data.success) {
-        showToast("Item added successfully!", "success");
+        showToast(`Added ${manualQty} ${manualUnit} of ${manualName}`, "success");
       }
     } catch (err) {
       console.error("Error adding manual item:", err);
@@ -344,13 +400,14 @@ const BillUpload = () => {
                     transition={{ duration: 0.3 }}
                     className="space-y-6"
                   >
+                    {/* Manual Entry UI */}
                     <div className="text-center space-y-2">
                       <h2 className="text-xl font-semibold text-slate-800">Add Item Manually</h2>
                       <p className="text-slate-600">Enter your grocery item details below</p>
                     </div>
 
                     <div className="space-y-5">
-                      {/* Item Name with Autocomplete */}
+                      {/* Item Name */}
                       <div className="space-y-2 relative">
                         <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                           <Search className="h-4 w-4" />
@@ -381,8 +438,7 @@ const BillUpload = () => {
                                     setSuggestions([]);
                                   }}
                                 >
-                                  <div className="font-medium text-slate-800">{s.name}</div>
-                                  <div className="text-sm text-slate-500 capitalize">{s.category}</div>
+                                  {s.name} ({s.category})
                                 </div>
                               ))}
                             </motion.div>
@@ -390,40 +446,40 @@ const BillUpload = () => {
                         </AnimatePresence>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {/* Category */}
-                        <div className="space-y-2">
+                      {/* Quantity + Unit */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
                           <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                             <Package className="h-4 w-4" />
-                            Category
+                            Quantity
                           </label>
-                          <select
-                            value={manualCategory}
-                            onChange={e => setManualCategory(e.target.value)}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
-                          >
-                            <option value="Fruit">Fruit</option>
-                            <option value="Vegetable">Vegetable</option>
-                            <option value="Dairy">Dairy</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-
-                        {/* Quantity */}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-700">Quantity</label>
                           <input
                             type="number"
-                            min="1"
+                            min={1}
                             value={manualQty}
-                            onChange={e => setManualQty(Number(e.target.value))}
+                            onChange={e => setManualQty(e.target.value)}
                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
                           />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                            Unit
+                          </label>
+                          <select
+                            value={manualUnit}
+                            onChange={e => setManualUnit(e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                          >
+                            <option value="unit">Unit</option>
+                            <option value="kg">Kg</option>
+                            <option value="g">g</option>
+                            <option value="pcs">Pcs</option>
+                          </select>
                         </div>
                       </div>
 
                       {/* Purchase Date */}
-                      <div className="space-y-2">
+                      <div>
                         <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           Purchase Date
@@ -436,15 +492,31 @@ const BillUpload = () => {
                         />
                       </div>
 
+                      {/* Category */}
+                      <div>
+                        <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                          <ChefHat className="h-4 w-4" />
+                          Category
+                        </label>
+                        <select
+                          value={manualCategory}
+                          onChange={e => setManualCategory(e.target.value)}
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                        >
+                          <option value="Fruit">Fruit</option>
+                          <option value="Vegetable">Vegetable</option>
+                          <option value="Dairy">Dairy</option>
+                        </select>
+                      </div>
+
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleAddManual}
-                        disabled={!manualName || !manualPurchaseDate}
-                        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                       >
                         <Plus className="h-5 w-5" />
-                        <span>Add Item to Fridge</span>
+                        Add Item
                       </motion.button>
                     </div>
                   </motion.div>
@@ -455,8 +527,7 @@ const BillUpload = () => {
         </div>
       </div>
 
-
-      {/* Toast Notification */}
+      {/* Toast */}
       <AnimatePresence>
         {toast.message && (
           <motion.div

@@ -8,19 +8,14 @@ import {
   FaExclamationTriangle, 
   FaCheckCircle, 
   FaPlus,
-  FaEdit,
-  FaTrash,
   FaBox,
   FaExclamationCircle,
   FaSearch
 } from "react-icons/fa";
 import { 
-  ChefHat, 
   AlertTriangle, 
   RefreshCw,
-  Filter,
-  Shield,
-  Sparkles
+  Filter
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -39,7 +34,6 @@ const Dashboard = () => {
       const res = await axios.get("http://localhost:5000/api/items", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const allItems = res.data.items || [];
       setItems(allItems);
     } catch (err) {
@@ -76,6 +70,7 @@ const Dashboard = () => {
         {
           name: editItem.name,
           quantity: editItem.quantity,
+          unit: editItem.unit,
           expiryDate: editItem.expiryDate,
         },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -124,6 +119,7 @@ const Dashboard = () => {
     return matchesSearch;
   });
 
+  // Stats with unit display
   const stats = [
     {
       label: "Total Products",
@@ -133,19 +129,25 @@ const Dashboard = () => {
     },
     {
       label: "Expiring Soon",
-      value: items.filter(item => getExpiryStatus(item.expiryDate).status === "expiring").length,
+      value: items
+        .filter(item => getExpiryStatus(item.expiryDate).status === "expiring")
+        .length,
       color: "from-orange-500 to-amber-500",
       icon: <FaClock className="h-6 w-6 text-white" />
     },
     {
       label: "Expired Items",
-      value: items.filter(item => getExpiryStatus(item.expiryDate).status === "expired").length,
+      value: items
+        .filter(item => getExpiryStatus(item.expiryDate).status === "expired")
+        .length,
       color: "from-red-500 to-pink-500",
       icon: <FaExclamationTriangle className="h-6 w-6 text-white" />
     },
     {
       label: "Fresh Items",
-      value: items.filter(item => getExpiryStatus(item.expiryDate).status === "valid").length,
+      value: items
+        .filter(item => getExpiryStatus(item.expiryDate).status === "valid")
+        .length,
       color: "from-emerald-500 to-green-500",
       icon: <FaCheckCircle className="h-6 w-6 text-white" />
     }
@@ -168,13 +170,8 @@ const Dashboard = () => {
 
       <div className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header with Product Name */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.6 }} 
-            className="mb-8"
-          >
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
                 <motion.button
@@ -211,19 +208,13 @@ const Dashboard = () => {
                     {stat.icon}
                   </div>
                 </div>
-                {/* Gradient accent */}
                 <div className={`absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r ${stat.color}`}></div>
               </motion.div>
             ))}
           </div>
 
-          {/* Search and Filter Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 mb-8"
-          >
+          {/* Search + Filter */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }} className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 mb-8">
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
               <div className="flex-1 w-full">
                 <div className="relative">
@@ -237,7 +228,6 @@ const Dashboard = () => {
                   />
                 </div>
               </div>
-              
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <Filter className="h-4 w-4" />
                 <span className="font-medium">Filter by:</span>
@@ -283,30 +273,29 @@ const Dashboard = () => {
               ) : filteredItems.length > 0 ? (
                 filteredItems.map((item, index) => (
                   <motion.div
+                   key={item.id}
                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                     exit={{ scale: 0.8, opacity: 0 }}
-  className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mt-8" 
->
-                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 overflow-hidden">
-                      <ItemCard item={item} />
+                   animate={{ scale: 1, opacity: 1 }}
+                   exit={{ scale: 0.8, opacity: 0 }}
+                   className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mt-8"
+                  >
+                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20 overflow-hidden relative">
+                      <ItemCard item={item} onEdit={(updated) => setEditItem(updated)} />
                       {/* Action Buttons */}
-                    <div className="absolute bottom-4 right-2 flex gap-2 opacity-100 group-hover:opacity-100 transition-opacity duration-300">
-                    <button
-                    onClick={() => setEditItem(item)}
-                    className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors"
-                    >
-                    Edit
-                    </button>
-
-                    <button
-                     onClick={() => handleDelete(item.id)}
-                     className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors"
-                    >
-                     Delete
-                    </button>
-                    </div>
-
+                      <div className="absolute bottom-4 right-2 flex gap-2 opacity-100 group-hover:opacity-100 transition-opacity duration-300">
+                        <button
+                          onClick={() => setEditItem(item)}
+                          className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
                       {/* Status Badge */}
                       <div className="absolute top-12 right-2">
                         <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getExpiryStatus(item.expiryDate).color}`}>
@@ -376,37 +365,38 @@ const Dashboard = () => {
 
                   <div>
                     <label className="text-sm font-medium text-slate-700 mb-2 block">Quantity</label>
-                    <input
-                      type="number"
-                      value={editItem.quantity}
-                      onChange={(e) => setEditItem({ ...editItem, quantity: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={editItem.quantity}
+                        onChange={(e) => setEditItem({ ...editItem, quantity: e.target.value })}
+                        className="w-1/2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                      />
+                      <input
+                        type="text"
+                        value={editItem.unit || "unit"}
+                        onChange={(e) => setEditItem({ ...editItem, unit: e.target.value })}
+                        placeholder="unit (kg, g, pcs)"
+                        className="w-1/2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-slate-700 mb-2 block">Expiry Date</label>
                     <input
                       type="date"
-                      value={editItem.expiryDate?.split("T")[0] || ""}
+                      value={editItem.expiryDate ? new Date(editItem.expiryDate).toISOString().split("T")[0] : ""}
                       onChange={(e) => setEditItem({ ...editItem, expiryDate: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300"
                     />
                   </div>
-                </div>
 
-                <div className="flex justify-end gap-3 mt-8">
                   <button
                     onClick={handleSave}
-                    className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-xl font-semibold shadow-lg transition-all duration-300"
                   >
                     Save Changes
-                  </button>
-                  <button
-                    onClick={() => setEditItem(null)}
-                    className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
-                  >
-                    Cancel
                   </button>
                 </div>
               </motion.div>

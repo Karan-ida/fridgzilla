@@ -5,6 +5,7 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(item.name);
   const [editQty, setEditQty] = useState(item.quantity);
+  const [editUnit, setEditUnit] = useState(item.unit || "unit");
   const [editPurchase, setEditPurchase] = useState(
     item.purchaseDate
       ? new Date(item.purchaseDate).toISOString().split("T")[0]
@@ -19,6 +20,7 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
       ...item,
       name: editName,
       quantity: editQty,
+      unit: editUnit,
       purchaseDate: new Date(editPurchase),
       expiryDate: new Date(editExpiry),
     });
@@ -33,7 +35,10 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
           SMS Sent
         </span>
       );
-    } else if (new Date(item.expiryDate) - new Date() <= 24 * 60 * 60 * 1000) {
+    } else if (
+      item.expiryDate &&
+      new Date(item.expiryDate) - new Date() <= 24 * 60 * 60 * 1000
+    ) {
       return (
         <span className="bg-yellow-200 text-yellow-800 px-2 py-1 text-xs rounded-full">
           SMS Pending
@@ -59,13 +64,22 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
           />
 
           {/* Quantity */}
-          <input
-            type="number"
-            min="1"
-            value={editQty}
-            onChange={(e) => setEditQty(Number(e.target.value))}
-            className="w-full px-3 py-1 border rounded focus:ring-2 focus:ring-emerald-500"
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="1"
+              value={editQty}
+              onChange={(e) => setEditQty(Number(e.target.value))}
+              className="w-1/2 px-3 py-1 border rounded focus:ring-2 focus:ring-emerald-500"
+            />
+            <input
+              type="text"
+              value={editUnit}
+              onChange={(e) => setEditUnit(e.target.value)}
+              placeholder="unit (kg, g, pcs...)"
+              className="w-1/2 px-3 py-1 border rounded focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
 
           {/* Purchase Date */}
           <input
@@ -102,7 +116,9 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
       ) : (
         <div>
           <h2 className="font-bold text-lg">{item.name}</h2>
-          <p>Quantity: {item.quantity}</p>
+          <p>
+            Quantity: {item.quantity} {item.unit || "unit"}
+          </p>
 
           {/* Show purchase + expiry dates */}
           {item.purchaseDate && (
@@ -115,7 +131,6 @@ const ItemCard = ({ item, onRemove, onEdit }) => {
               Expiry Date: {new Date(item.expiryDate).toLocaleDateString()}
             </p>
           )}
-
         </div>
       )}
     </div>

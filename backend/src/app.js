@@ -22,13 +22,14 @@ app.use(express.json());
 
 // ✅ Route mounting
 app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/bills", billRoutes);
-app.use("/api/analytics", analyticsRoutes);
 app.use("/api/items", itemRoutes);
+app.use("/api/users", userRoutes);
 app.use("/password", passwordRoutes);
 
 // ✅ Centralized error handler (must be last)
 app.use(errorHandler);
+// after app.use(express.json());
+app.use("/uploads", express.static("uploads"));
+
 
 export default app;

@@ -1,40 +1,40 @@
 import cron from "node-cron";
 import { Op } from "sequelize";
-import client from "../utils/twilioClient.js";
-import Item from "../models/Item.js";
-import User from "../models/User.js";
+import { sendSMS } from "../utils/sendSMS.js";
+import { Product, User } from "../models/index.js";
 
-// Daily check at 9 AM
-cron.schedule("0 9 * * *", async () => {
-  console.log("🔍 Checking for products expiring in 24h...");
+console.log("🕒 Expiry reminder scheduler is active and waiting...");
+
+// 🔔 Run every day at 8 AM
+cron.schedule("0 8 * * *", async () => {
+  console.log("🔔 Checking for expiring groceries...");
+
+  const today = new Date();
+  const upcoming = new Date();
+  upcoming.setDate(today.getDate() + 2); // next 2 days
 
   try {
-    const now = new Date();
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-    const items = await Item.findAll({
+    const expiringItems = await Product.findAll({
       where: {
-        expiryDate: { [Op.between]: [now, tomorrow] },
-        smsNotified: false,
+        expiryDate: { [Op.between]: [today, upcoming] },
+        isNotified: false,
       },
-      include: [{ model: User, as: "user" }],
+      include: [{ model: User, as: "user", attributes: ["name", "phone"] }],
     });
 
-    for (const item of items) {
+    for (const item of expiringItems) {
       if (item.user?.phone) {
-        const message = `⚠️ Reminder: Your product "${item.name}" expires on ${item.expiryDate.toDateString()}`;
-        await client.messages.create({
-          body: message,
-          from: process.env.TWILIO_PHONE_NUMBER,
-          to: item.user.phone,
-        });
+        const message = `⚠️ Hi ${item.user.name || "there"}! Your grocery "${item.name}" will expire on ${item.expiryDate.toDateString()}.`;
+        await sendSMS(item.user.phone, message);
 
-        // Update SMS status
-        await item.update({ smsNotified: true });
-        console.log(`✅ SMS sent and updated for ${item.user.phone} (Item: ${item.name})`);
+        // Mark as notified to avoid duplicates
+        item.isNotified = true;
+        await item.save();
       }
     }
-  } catch (err) {
-    console.error("❌ Error in expiry notification:", err.message);
+
+    console.log(`✅ Sent ${expiringItems.length} expiry reminders.`);
+  } catch (error) {
+    console.error("❌ Scheduler Error:", error.message);
   }
 });

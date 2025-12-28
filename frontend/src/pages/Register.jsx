@@ -4,6 +4,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { Eye, EyeOff, Shield, Sparkles, ChefHat, Check, User, Phone, Mail } from "lucide-react";
+import TermsModal from "../Components/TermsModal.jsx";
+import PrivacyModal from "../Components/PrivacyModal.jsx";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -16,6 +18,9 @@ const Register = () => {
   const [error, setError] = useState(""); 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
   const navigate = useNavigate();
 
   // Regex patterns
@@ -298,43 +303,56 @@ const Register = () => {
 
                 {/* Terms and Conditions */}
                 <label className="flex items-start space-x-3 cursor-pointer mt-4">
-                  <div className="relative mt-1">
-                    <input
-                      type="checkbox"
-                      checked={agreeToTerms}
-                      onChange={(e) => setAgreeToTerms(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-5 h-5 border-2 rounded-md transition-all duration-300 ${
-                      agreeToTerms 
-                        ? 'bg-emerald-500 border-emerald-500' 
-                        : 'bg-white border-slate-300'
-                    }`}>
-                      {agreeToTerms && (
-                        <motion.svg
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-4 h-4 text-white mt-0.5 ml-0.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </motion.svg>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-sm text-slate-700 flex-1">
-                    I agree to the{" "}
-                    <a href="#" className="text-emerald-600 hover:text-emerald-500 font-medium">
-                      Terms and Conditions
-                    </a>{" "}
-                    and{" "}
-                    <a href="#" className="text-emerald-600 hover:text-emerald-500 font-medium">
-                      Privacy Policy
-                    </a>
-                  </span>
-                </label>
+  <div className="relative mt-1">
+    <input
+      type="checkbox"
+      checked={agreeToTerms}
+      onChange={(e) => setAgreeToTerms(e.target.checked)}
+      className="sr-only"
+    />
+    <div className={`w-5 h-5 border-2 rounded-md transition-all duration-300 ${
+      agreeToTerms 
+        ? 'bg-emerald-500 border-emerald-500' 
+        : 'bg-white border-slate-300'
+    }`}>
+      {agreeToTerms && (
+        <motion.svg
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="w-4 h-4 text-white mt-0.5 ml-0.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+        </motion.svg>
+      )}
+    </div>
+  </div>
+  <span className="text-sm text-slate-700 flex-1">
+    I agree to the{" "}
+    <button
+      type="button"
+      onClick={() => setShowTerms(true)}
+      className="text-emerald-600 hover:text-emerald-500 font-medium underline"
+    >
+      Terms and Conditions
+    </button>{" "}
+    and{" "}
+    <button
+      type="button"
+      onClick={() => setShowPrivacy(true)}
+      className="text-emerald-600 hover:text-emerald-500 font-medium underline"
+    >
+      Privacy Policy
+    </button>
+  </span>
+</label>
+
+              {/* ✅ Show Modals */}
+                {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
+                {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
+
 
                 {/* Submit Button */}
                 <motion.button

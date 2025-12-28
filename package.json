@@ -2,5 +2,33 @@
   "dependencies": {
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2"
-  }
+  },
+  "name": "fridgella",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "devDependencies": {
+    "chai": "^6.2.0",
+    "chromedriver": "^141.0.2",
+    "mocha": "^11.7.4",
+    "selenium-webdriver": "^4.36.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e": "mocha test/**/*.test.js --timeout 60000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Karan-ida/fridgzilla.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Karan-ida/fridgzilla/issues"
+  },
+  "homepage": "https://github.com/Karan-ida/fridgzilla#readme"
 }

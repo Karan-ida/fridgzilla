@@ -1,7 +1,6 @@
 // backend/src/controllers/itemController.js
 import Item from "../models/Item.js";
 import { validateItem } from "../utils/validators.js";
-import client from "../utils/twilioClient.js";
 import User from "../models/User.js";
 
 // Function to send SMS reminder

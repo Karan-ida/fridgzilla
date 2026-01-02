@@ -17,10 +17,7 @@ import errorHandler from "./middlewares/errorHandler.js";
 const app = express();
 
 // ✅ Global middlewares
-app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 // ✅ Route mounting
@@ -31,7 +28,9 @@ app.use("/password", passwordRoutes);
 
 // ✅ Centralized error handler (must be last)
 app.use(errorHandler);
-
+// after app.use(express.json());
+app.use("/uploads", express.static("uploads"));
 
 
 export default app;
+
